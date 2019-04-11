@@ -23,31 +23,51 @@ effect_1.Effect.ShadersStore["textureCanvasFragmentShader"] = "\nprecision highp
 var TextureCanvasDrawContext = /** @class */ (function () {
     function TextureCanvasDrawContext(textureCanvas) {
         this.textureCanvas = textureCanvas;
-        this._defaultTextureDrawOptions = TextureCanvasDrawContext.getDefaultValues();
-        this.resetDrawOptions();
+        this._defaultTextureDrawOptions = TextureCanvasDrawContext.DEFAULT_TEXTURE_DRAW_OPTIONS;
+        /** The u-coordinate of this texture at which to draw the diffuse texture; with the origin being the bottom-left corner. */
+        this.du = 0;
+        /** The v-coordinate of this texture at which to draw the diffuse texture; with the origin being the bottom-left corner. */
+        this.dv = 0;
+        /** The width to draw the texture at; ranging from 0.0 to 1.0 */
+        this.dWidth = 1;
+        /** The height to draw the texture at; ranging from 0.0 to 1.0 */
+        this.dHeight = 1;
+        /** The u-coordinate of the diffuse texture from which to draw it. */
+        this.su = 0;
+        /** The v-coordinate of the diffuse texture from which to draw it. */
+        this.sv = 0;
+        /** The width of the region of the diffuse texture to be drawn; ranging from 0.0 to 1.0 */
+        this.sWidth = 1;
+        /** The height of the region of the diffuse texture to be drawn; ranging from 0.0 to 1.0 */
+        this.sHeight = 1;
+        /** The rotation in radians to rotate the diffuse textures by. */
+        this.rotation = 0;
+        /** The u-coordinate of the rotation pivot point. */
+        this.pu = 0.5;
+        /** The v-coordinate of the rotation pivot point. */
+        this.pv = 0.5;
+        /** Whether the pivot coordinates are in local space (of the diffuse textures) or in world space (of the canvas). */
+        this.pIsLocalSpace = true;
+        /** The horizontal skewing factor. */
+        this.skewU = 0;
+        /** The vertical skewing factor. */
+        this.skewV = 0;
+        /** The u-coordinate of the opacity texture from which to draw it. */
+        this.ou = 0;
+        /** The v-coordinate of the opacity texture from which to draw it. */
+        this.ov = 0;
+        /** The width of the region of the opacity texture to be drawn; ranging from 0.0 to 1.0 */
+        this.oWidth = 1;
+        /** The height of the region of the opacity texture to be drawn; ranging from 0.0 to 1.0 */
+        this.oHeight = 1;
+        /** The color to clear the canvas with. */
+        this.clearColor = new math_1.Color4(0.0, 0.0, 0.0, 0.0);
     }
     /**
      * Resets the draw options to their default values.
      */
-    TextureCanvasDrawContext.prototype.resetDrawOptions = function () {
-        this.du = this._defaultTextureDrawOptions.du;
-        this.dv = this._defaultTextureDrawOptions.dv;
-        this.dWidth = this._defaultTextureDrawOptions.dWidth;
-        this.dHeight = this._defaultTextureDrawOptions.dHeight;
-        this.su = this._defaultTextureDrawOptions.su;
-        this.sv = this._defaultTextureDrawOptions.sv;
-        this.sWidth = this._defaultTextureDrawOptions.sWidth;
-        this.sHeight = this._defaultTextureDrawOptions.sHeight;
-        this.rotation = this._defaultTextureDrawOptions.rotation;
-        this.pu = this._defaultTextureDrawOptions.pu;
-        this.pv = this._defaultTextureDrawOptions.pv;
-        this.pIsLocalSpace = this._defaultTextureDrawOptions.pIsLocalSpace;
-        this.skewU = this._defaultTextureDrawOptions.skewU;
-        this.skewV = this._defaultTextureDrawOptions.skewV;
-        this.ou = this._defaultTextureDrawOptions.ou;
-        this.ov = this._defaultTextureDrawOptions.ov;
-        this.oWidth = this._defaultTextureDrawOptions.oWidth;
-        this.oHeight = this._defaultTextureDrawOptions.oHeight;
+    TextureCanvasDrawContext.prototype.reset = function () {
+        this._defaultTextureDrawOptions.clone(true, this);
     };
     /**
      * Sets the texture to draw.
@@ -169,33 +189,47 @@ var TextureCanvasDrawContext = /** @class */ (function () {
     TextureCanvasDrawContext.prototype.drawTexture = function (diffuseTexture) {
         this.textureCanvas.drawTexture(diffuseTexture, this);
     };
-    TextureCanvasDrawContext.getDefaultValues = function () {
-        return {
-            /* Destination */
-            du: 0,
-            dv: 0,
-            dWidth: 1,
-            dHeight: 1,
-            rotation: 0,
-            /* Source */
-            su: 0,
-            sv: 0,
-            sWidth: 1,
-            sHeight: 1,
-            /* Pivot */
-            pu: 0.5,
-            pv: 0.5,
-            pIsLocalSpace: true,
-            /* Skewing (shearing) */
-            skewU: 0,
-            skewV: 0,
-            /* Opacity */
-            ou: 0,
-            ov: 0,
-            oWidth: 0,
-            oHeight: 0
-        };
+    /**
+     * Clears the canvas using the set clearColor.
+     */
+    TextureCanvasDrawContext.prototype.clear = function () {
+        this.textureCanvas.clear(this);
     };
+    /**
+     * Returns a clone of this context.
+     *
+     * @param deep Wether to clone the member objects.
+     * @param ref The context to clone into.
+     */
+    TextureCanvasDrawContext.prototype.clone = function (deep, ref) {
+        if (deep === void 0) { deep = false; }
+        if (!ref) {
+            ref = new TextureCanvasDrawContext(this.textureCanvas);
+        }
+        ref.diffuseTexture = (deep && this.diffuseTexture) ? this.diffuseTexture.clone() : this.diffuseTexture;
+        ref.du = this.du;
+        ref.dv = this.dv;
+        ref.dWidth = this.dWidth;
+        ref.dHeight = this.dHeight;
+        ref.su = this.su;
+        ref.sv = this.sv;
+        ref.sWidth = this.sWidth;
+        ref.sHeight = this.sHeight;
+        ref.rotation = this.rotation;
+        ref.pu = this.pu;
+        ref.pv = this.pv;
+        ref.pIsLocalSpace = this.pIsLocalSpace;
+        ref.skewU = this.skewU;
+        ref.skewV = this.skewV;
+        ref.opacityTexture = (deep && this.opacityTexture) ? this.opacityTexture.clone() : this.opacityTexture;
+        ref.ou = this.ou;
+        ref.ov = this.ov;
+        ref.oWidth = this.oWidth;
+        ref.oHeight = this.oHeight;
+        ref.clearColor = deep ? this.clearColor.clone() : this.clearColor;
+        return ref;
+    };
+    TextureCanvasDrawContext.DEFAULT_TEXTURE_DRAW_OPTIONS = new TextureCanvasDrawContext();
     return TextureCanvasDrawContext;
 }());
 exports.TextureCanvasDrawContext = TextureCanvasDrawContext;
@@ -224,7 +258,6 @@ var TextureCanvas = /** @class */ (function (_super) {
         _this._createIndexBuffer();
         _this.wrapU = 0;
         _this.wrapV = 0;
-        _this.clearColor = new math_1.Color4(0.0, 0.0, 0.0, 0.0);
         _this._generateMipMaps = options.generateMipMaps;
         _this.clear();
         _this._effect.executeWhenCompiled(function () {
@@ -236,6 +269,7 @@ var TextureCanvas = /** @class */ (function (_super) {
     }
     /**
      * Is the texture ready to be used ? (rendered at least once)
+     *
      * @returns true if ready, otherwise, false.
      */
     TextureCanvas.prototype.isReady = function () {
@@ -247,12 +281,12 @@ var TextureCanvas = /** @class */ (function (_super) {
     /**
      * Draws the diffuse texture, if set.
      *
-     * @param textureDrawOptions The texture draw options.
+     * @param ctx The texture draw options.
      */
-    TextureCanvas.prototype.draw = function (textureDrawOptions) {
-        if (textureDrawOptions === void 0) { textureDrawOptions = this._defaultDrawContext; }
-        if (textureDrawOptions.diffuseTexture) {
-            this.drawTexture(textureDrawOptions.diffuseTexture, textureDrawOptions);
+    TextureCanvas.prototype.draw = function (ctx) {
+        if (ctx === void 0) { ctx = this._defaultDrawContext; }
+        if (ctx.diffuseTexture) {
+            this.drawTexture(ctx.diffuseTexture, ctx);
         }
     };
     /**
@@ -319,20 +353,22 @@ var TextureCanvas = /** @class */ (function (_super) {
         };
     };
     /**
-     * Clears this texture using the set clearColor
+     * Clears this texture using clearColor from the provided context.
      */
-    TextureCanvas.prototype.clear = function () {
+    TextureCanvas.prototype.clear = function (ctx) {
+        if (ctx === void 0) { ctx = this._defaultDrawContext; }
         // Backbuffer
         this._engine.bindFramebuffer(this._backBuffer._texture);
-        this._engine.clear(this.clearColor, true, false, false);
+        this._engine.clear(ctx.clearColor, true, false, false);
         this._engine.unBindFramebuffer(this._backBuffer._texture, !this._generateMipMaps);
         // Self
         this._engine.bindFramebuffer(this._texture);
-        this._engine.clear(this.clearColor, true, false, false);
+        this._engine.clear(ctx.clearColor, true, false, false);
         this._engine.unBindFramebuffer(this._texture, !this._generateMipMaps);
     };
     /**
     * Resize the texture to new value.
+    *
     * @param size Define the new size the texture should have
     * @param generateMipMaps Define whether the new texture should create mip maps
     */
@@ -344,6 +380,9 @@ var TextureCanvas = /** @class */ (function (_super) {
         this._size = size;
         this._generateMipMaps = generateMipMaps;
     };
+    /**
+     * Creates a new draw context. Does NOT invalidate other contexts created.
+     */
     TextureCanvas.prototype.createContext = function () {
         return new TextureCanvasDrawContext(this);
     };
