@@ -63,50 +63,227 @@ void main(void) {
 }
 `;
 
+export class TextureCanvasDrawContext {
+    protected static readonly DEFAULT_TEXTURE_DRAW_OPTIONS: TextureCanvasDrawContext = new TextureCanvasDrawContext();
 
-export interface TextureDrawOptions {
-    /** The u-coordinate of this texture at which to draw the diffuse texture, with the origin being the bottom-left corner. */
-    du: number,
-    /** The v-coordinate of this texture at which to draw the diffuse texture, with the origin being the bottom-left corner. */
-    dv: number,
-    /** The width to draw the texture at, ranging from 0.0 to 1.0 */
-    dWidth: number,
-    /** The height to draw the texture at, ranging from 0.0 to 1.0 */
-    dHeight: number,
+    protected _defaultTextureDrawOptions = TextureCanvasDrawContext.DEFAULT_TEXTURE_DRAW_OPTIONS;
+
+    /** The texture to draw. */
+    public diffuseTexture: Texture;
+    /** The u-coordinate of this texture at which to draw the diffuse texture; with the origin being the bottom-left corner. */
+    public du: number = 0;
+    /** The v-coordinate of this texture at which to draw the diffuse texture; with the origin being the bottom-left corner. */
+    public dv: number = 0;
+    /** The width to draw the texture at; ranging from 0.0 to 1.0 */
+    public dWidth: number = 1;
+    /** The height to draw the texture at; ranging from 0.0 to 1.0 */
+    public dHeight: number = 1;
 
     /** The u-coordinate of the diffuse texture from which to draw it. */
-    su: number,
+    public su: number = 0;
     /** The v-coordinate of the diffuse texture from which to draw it. */
-    sv: number,
-    /** The width of the region of the diffuse texture to be drawn, ranging from 0.0 to 1.0 */
-    sWidth: number,
-    /** The height of the region of the diffuse texture to be drawn, ranging from 0.0 to 1.0 */
-    sHeight: number,
+    public sv: number = 0;
+    /** The width of the region of the diffuse texture to be drawn; ranging from 0.0 to 1.0 */
+    public sWidth: number = 1;
+    /** The height of the region of the diffuse texture to be drawn; ranging from 0.0 to 1.0 */
+    public sHeight: number = 1;
 
     /** The rotation in radians to rotate the diffuse textures by. */
-    rotation: number,
+    public rotation: number = 0;
     /** The u-coordinate of the rotation pivot point. */
-    pu: number,
+    public pu: number = 0.5;
     /** The v-coordinate of the rotation pivot point. */
-    pv: number,
-    /** Whether the pivot coordinates are in local space (of the diffuse textures) or in world space (of this texture). */
-    pIsLocalSpace: boolean,
+    public pv: number = 0.5;
+    /** Whether the pivot coordinates are in local space (of the diffuse textures) or in world space (of the canvas). */
+    public pIsLocalSpace: boolean = true;
 
     /** The horizontal skewing factor. */
-    skewU: number,
+    public skewU: number = 0;
     /** The vertical skewing factor. */
-    skewV: number,
+    public skewV: number = 0;
 
     /** The texture to use as the diffuse texture's alpha channel. */
-    opacityTexture?: Texture,
+    public opacityTexture: Texture;
     /** The u-coordinate of the opacity texture from which to draw it. */
-    ou: number,
+    public ou: number = 0;
     /** The v-coordinate of the opacity texture from which to draw it. */
-    ov: number,
-    /** The width of the region of the opacity texture to be drawn, ranging from 0.0 to 1.0 */
-    oWidth: number,
-    /** The height of the region of the opacity texture to be drawn, ranging from 0.0 to 1.0 */
-    oHeight: number
+    public ov: number = 0;
+    /** The width of the region of the opacity texture to be drawn; ranging from 0.0 to 1.0 */
+    public oWidth: number = 1;
+    /** The height of the region of the opacity texture to be drawn; ranging from 0.0 to 1.0 */
+    public oHeight: number = 1;
+
+    /** The color to clear the canvas with. */
+    public clearColor: Color4 = new Color4(0.0, 0.0, 0.0, 0.0);
+
+    constructor(public textureCanvas?: TextureCanvas) {
+    }
+
+    /**
+     * Resets the draw options to their default values.
+     */
+    reset(): void {
+        this._defaultTextureDrawOptions.clone(true, this);
+    }
+
+    /**
+     * Sets the texture to draw.
+     * 
+     * @param texture The texture to draw.
+     */
+    setDiffuseTexture(texture: Texture): void {
+        this.diffuseTexture = texture;
+    }
+
+    /**
+     * Sets a texture to be used as the diffuse texture's alpha channel.
+     * 
+     * @param texture The texture to use as the diffuse texture's alpha channel.
+     */
+    setOpacityTexture(texture: Texture): void {
+        this.opacityTexture = texture;
+    }
+
+    /**
+     * Sets which area of the diffuse texture to draw.
+     * 
+     * @param u The u-coordinate from which to draw.
+     * @param v The v-coordinate from which to draw.
+     * @param width The width of the area to be drawn, ranging from 0.0 to 1.0
+     * @param height The height of the area to be drawn, ranging from 0.0 to 1.0
+     */
+    setDiffuseSamplingRect(u = this._defaultTextureDrawOptions.su, v = this._defaultTextureDrawOptions.sv, width = this._defaultTextureDrawOptions.sWidth, height = this._defaultTextureDrawOptions.sHeight): void {
+        this.su = u;
+        this.sv = v;
+        this.sWidth = width;
+        this.sHeight = height;
+    }
+
+    /**
+     * Sets which area of the opacity texture to draw.
+     * 
+     * @param u The u-coordinate from which to draw.
+     * @param v The v-coordinate from which to draw.
+     * @param width The width of the area to be drawn, ranging from 0.0 to 1.0
+     * @param height The height of the area to be drawn, ranging from 0.0 to 1.0
+     */
+    setOpacitySamplingRect(u = this._defaultTextureDrawOptions.ou, v = this._defaultTextureDrawOptions.ov, width = this._defaultTextureDrawOptions.oWidth, height = this._defaultTextureDrawOptions.oHeight): void {
+        this.ou = u;
+        this.ov = v;
+        this.oWidth = width;
+        this.oHeight = height;
+    }
+
+    /**
+     * Sets which area of this texture to draw to — this area may be tranformed by rotating/skewing.
+     * 
+     * @param u The u-coordinate of this texture at which to draw the diffuse texture, with the origin being the bottom-left corner.
+     * @param v The v-coordinate of this texture at which to draw the diffuse texture, with the origin being the bottom-left corner.
+     * @param width The width to draw the texture at, ranging from 0.0 to 1.0
+     * @param height The height to draw the texture at, ranging from 0.0 to 1.0
+     */
+    setDrawRect(u = this._defaultTextureDrawOptions.du, v = this._defaultTextureDrawOptions.dv, width = this._defaultTextureDrawOptions.dWidth, height = this._defaultTextureDrawOptions.dHeight): void {
+        this.du = u;
+        this.dv = v;
+        this.dWidth = width;
+        this.dHeight = height;
+    }
+
+    /**
+     * Sets the rotation in radians to rotate the diffuse texture by.
+     * 
+     * @param rotation The rotation in radians to rotate the diffuse textures by.
+     */
+    setRotation(rotation = this._defaultTextureDrawOptions.rotation): void {
+        this.rotation = rotation;
+    }
+
+    /**
+     * Sets the point around which to rotate the texture.
+     * 
+     * @param pu The u-coordinate of the rotation pivot point.
+     * @param pv The v-coordinate of the rotation pivot point.
+     * @param isLocalSpace Whether the pivot coordinates are in local space (of the diffuse textures) or in world space (of this texture).
+     */
+    setPivotPoint(pu = this._defaultTextureDrawOptions.pu, pv = this._defaultTextureDrawOptions.pv, isLocalSpace = this._defaultTextureDrawOptions.pIsLocalSpace): void {
+        this.pu = pu;
+        this.pv = pv;
+        this.pIsLocalSpace = isLocalSpace;
+    }
+
+    /**
+     * Sets how the texture should be skewed (shear transform).
+     * 
+     * @param u The horizontal skewing factor.
+     * @param v The vertical skewing factor.
+     */
+    setSkewing(u = this._defaultTextureDrawOptions.skewU, v = this._defaultTextureDrawOptions.skewV): void {
+        this.skewU = u;
+        this.skewV = v;
+    }
+
+    /**
+     * Draws the diffuse texture, if set.
+     */
+    draw(): void {
+        this.textureCanvas.draw(this);
+    }
+
+    /**
+     * Draws a texture.
+     * 
+     * @param diffuseTexture The texture to draw.
+     */
+    drawTexture(diffuseTexture: Texture) {
+        this.textureCanvas.drawTexture(diffuseTexture, this);
+    }
+
+    /**
+     * Clears the canvas using the set clearColor.
+     */
+    clear(): void {
+        this.textureCanvas.clear(this);
+    }
+
+    /**
+     * Returns a clone of this context.
+     * 
+     * @param deep Wether to clone the member objects.
+     * @param ref The context to clone into.
+     */
+    clone(deep = false, ref?: TextureCanvasDrawContext): TextureCanvasDrawContext {
+        if (!ref) {
+            ref = new TextureCanvasDrawContext(this.textureCanvas);
+        }
+        ref.diffuseTexture = (deep && this.diffuseTexture) ? this.diffuseTexture.clone() : this.diffuseTexture;
+        ref.du = this.du;
+        ref.dv = this.dv;
+        ref.dWidth = this.dWidth;
+        ref.dHeight = this.dHeight;
+
+        ref.su = this.su;
+        ref.sv = this.sv;
+        ref.sWidth = this.sWidth;
+        ref.sHeight = this.sHeight;
+
+        ref.rotation = this.rotation;
+        ref.pu = this.pu;
+        ref.pv = this.pv;
+        ref.pIsLocalSpace = this.pIsLocalSpace;
+
+        ref.skewU = this.skewU;
+        ref.skewV = this.skewV;
+
+        ref.opacityTexture = (deep && this.opacityTexture) ? this.opacityTexture.clone() : this.opacityTexture;
+        ref.ou = this.ou;
+        ref.ov = this.ov;
+        ref.oWidth = this.oWidth;
+        ref.oHeight = this.oHeight;
+
+        ref.clearColor = deep ? this.clearColor.clone() : this.clearColor;
+
+        return ref;
+    }
 }
 
 export class TextureCanvas extends Texture {
@@ -118,10 +295,8 @@ export class TextureCanvas extends Texture {
     private _backBuffer: Texture;
     private _engine: Engine;
 
-    private _textureDrawOptions = TextureCanvas.getDefaultTextureDrawOptions();
-    private readonly _defaultTextureDrawOptions = TextureCanvas.getDefaultTextureDrawOptions();
-
-    public clearColor: Color4;
+    private _previousDrawInfo: { wasReady: boolean, diffuseTexture: Texture, drawContext: TextureCanvasDrawContext };
+    private _defaultDrawContext = new TextureCanvasDrawContext(this);
 
     constructor(size: number | { width: number, height: number }, scene: Nullable<Scene>, onReady?: Function, options: { generateMipMaps?: boolean, samplingMode?: number } = {}) {
         super(null, scene, !options.generateMipMaps, false, options.samplingMode);
@@ -148,7 +323,6 @@ export class TextureCanvas extends Texture {
         this.wrapU = 0;
         this.wrapV = 0;
 
-        this.clearColor = new Color4(0.0, 0.0, 0.0, 0.0);
         this._generateMipMaps = options.generateMipMaps;
 
         this.clear();
@@ -162,6 +336,7 @@ export class TextureCanvas extends Texture {
 
     /**
      * Is the texture ready to be used ? (rendered at least once)
+     * 
      * @returns true if ready, otherwise, false.
      */
     isReady(): boolean {
@@ -172,133 +347,43 @@ export class TextureCanvas extends Texture {
     }
 
     /**
-     * Resets the drawing options to their default values.
-     */
-    resetOptions() {
-        this._textureDrawOptions = TextureCanvas.getDefaultTextureDrawOptions();
-    }
-
-    /**
-     * Sets which area of the diffuse texture to draw.
+     * Draws the diffuse texture, if set.
      * 
-     * @param u The u-coordinate from which to draw.
-     * @param v The v-coordinate from which to draw.
-     * @param width The width of the area to be drawn, ranging from 0.0 to 1.0
-     * @param height The height of the area to be drawn, ranging from 0.0 to 1.0
+     * @param ctx The texture draw options.
      */
-    setDiffuseSamplingRect(u = this._defaultTextureDrawOptions.su, v = this._defaultTextureDrawOptions.sv, width = this._defaultTextureDrawOptions.sWidth, height = this._defaultTextureDrawOptions.sHeight) {
-        this._textureDrawOptions.su = u;
-        this._textureDrawOptions.sv = v;
-        this._textureDrawOptions.sWidth = width;
-        this._textureDrawOptions.sHeight = height;
-    }
-
-    /**
-     * Sets a texture to be used as the diffuse texture's alpha channel.
-     * 
-     * @param texture The texture to use as the diffuse texture's alpha channel.
-     */
-    setOpacityTexture(texture: Texture) {
-        this._textureDrawOptions.opacityTexture = texture;
-    }
-
-    /**
-     * Sets which area of the opacity texture to draw.
-     * 
-     * @param u The u-coordinate from which to draw.
-     * @param v The v-coordinate from which to draw.
-     * @param width The width of the area to be drawn, ranging from 0.0 to 1.0
-     * @param height The height of the area to be drawn, ranging from 0.0 to 1.0
-     */
-    setOpacitySamplingRect(u = this._defaultTextureDrawOptions.ou, v = this._defaultTextureDrawOptions.ov, width = this._defaultTextureDrawOptions.oWidth, height = this._defaultTextureDrawOptions.oHeight) {
-        this._textureDrawOptions.ou = u;
-        this._textureDrawOptions.ov = v;
-        this._textureDrawOptions.oWidth = width;
-        this._textureDrawOptions.oHeight = height;
-    }
-
-    /**
-     * Sets which area of this texture to draw to — this area may be tranformed by rotating/skewing
-     * 
-     * @param u The u-coordinate of this texture at which to draw the diffuse texture, with the origin being the bottom-left corner.
-     * @param v The v-coordinate of this texture at which to draw the diffuse texture, with the origin being the bottom-left corner.
-     * @param width The width to draw the texture at, ranging from 0.0 to 1.0
-     * @param height The height to draw the texture at, ranging from 0.0 to 1.0
-     */
-    setDestinationRect(u = this._defaultTextureDrawOptions.du, v = this._defaultTextureDrawOptions.dv, width = this._defaultTextureDrawOptions.dWidth, height = this._defaultTextureDrawOptions.dHeight) {
-        this._textureDrawOptions.du = u;
-        this._textureDrawOptions.dv = v;
-        this._textureDrawOptions.dWidth = width;
-        this._textureDrawOptions.dHeight = height;
-    }
-
-    /**
-     * Sets the rotation in radians to rotate the diffuse textures by.
-     * 
-     * @param rotation The rotation in radians to rotate the diffuse textures by.
-     */
-    setRotation(rotation = this._defaultTextureDrawOptions.rotation) {
-        this._textureDrawOptions.rotation = rotation;
-    }
-
-    /**
-     * Sets the point around which to rotate the texture.
-     * 
-     * @param pu The u-coordinate of the rotation pivot point.
-     * @param pv The v-coordinate of the rotation pivot point.
-     * @param isLocalSpace Whether the pivot coordinates are in local space (of the diffuse textures) or in world space (of this texture).
-     */
-    setPivotPoint(pu = this._defaultTextureDrawOptions.pu, pv = this._defaultTextureDrawOptions.pv, isLocalSpace = this._defaultTextureDrawOptions.pIsLocalSpace) {
-        this._textureDrawOptions.pu = pu;
-        this._textureDrawOptions.pv = pv;
-        this._textureDrawOptions.pIsLocalSpace = isLocalSpace;
-    }
-
-    /**
-     * Sets how the texture should be skewed (sheared).
-     * 
-     * @param u The horizontal skewing factor.
-     * @param v The vertical skewing factor.
-     */
-    setSkewing(u = this._defaultTextureDrawOptions.skewU, v = this._textureDrawOptions.skewV) {
-        this._textureDrawOptions.skewU = u;
-        this._textureDrawOptions.skewV = v;
+    draw(ctx: TextureCanvasDrawContext = this._defaultDrawContext) {
+        if (ctx.diffuseTexture) {
+            this.drawTexture(ctx.diffuseTexture, ctx);
+        }
     }
 
     /**
      * Draws a texture.
      * 
      * @param diffuseTexture The texture to draw.
+     * @param ctx The texture draw context.
      */
-    drawTexture(diffuseTexture: Texture, textureDrawOptions = this._textureDrawOptions): void {
-        if (this.isReady()) {
+    drawTexture(diffuseTexture: Texture, ctx: TextureCanvasDrawContext = this._defaultDrawContext): void {
+        let isReady = this.isReady();
+        if (isReady) {
             let engine = this._engine;
             let effect = this._effect;
             let gl = engine._gl;
-            let p = textureDrawOptions;
-
-            if (!p.opacityTexture) {
-                p.opacityTexture = diffuseTexture;
-                p.ou = p.du;
-                p.ov = p.dv;
-                p.oWidth = p.dWidth;
-                p.oHeight = p.dHeight;
-            }
 
             let pivotU: number;
             let pivotV: number;
 
-            let vertexTranslationX = p.dWidth - 1 + p.du * 2;
-            let vertexTranslationY = p.dHeight - 1 + p.dv * 2;
+            let vertexTranslationX = ctx.dWidth - 1 + ctx.du * 2;
+            let vertexTranslationY = ctx.dHeight - 1 + ctx.dv * 2;
 
-            if (p.pIsLocalSpace) {
-                let _pu = (p.pu * 2 - 1) * p.dWidth;
-                let _pv = (p.pv * 2 - 1) * p.dHeight;
-                pivotU = _pu + _pv * p.skewU + vertexTranslationX;
-                pivotV = _pv + _pu * p.skewV + vertexTranslationY;
+            if (ctx.pIsLocalSpace) {
+                let _pu = (ctx.pu * 2 - 1) * ctx.dWidth;
+                let _pv = (ctx.pv * 2 - 1) * ctx.dHeight;
+                pivotU = _pu + _pv * ctx.skewU + vertexTranslationX;
+                pivotV = _pv + _pu * ctx.skewV + vertexTranslationY;
             } else {
-                pivotU = p.pu * 2 - 1;
-                pivotV = p.pv * 2 - 1;
+                pivotU = ctx.pu * 2 - 1;
+                pivotV = ctx.pv * 2 - 1;
             }
 
             engine.enableEffect(this._effect);
@@ -307,22 +392,28 @@ export class TextureCanvas extends Texture {
             engine.bindBuffers(this._vertexBuffers, this._indexBuffer, this._effect);
 
             effect.setTexture('diffuseSampler', diffuseTexture);
-            effect.setTexture('opacitySampler', p.opacityTexture);
             effect.setTexture('backgroundSampler', this);
 
-            effect.setFloat('rotation', p.rotation);
+            effect.setFloat('rotation', ctx.rotation);
             effect.setFloat2('pivot', pivotU, pivotV);
 
             effect.setFloat2('vertextTranslation', vertexTranslationX, vertexTranslationY);
-            effect.setFloat2('vertexScaling', p.dWidth, p.dHeight);
+            effect.setFloat2('vertexScaling', ctx.dWidth, ctx.dHeight);
 
-            effect.setFloat2('diffuseUVScaling', p.sWidth, p.sHeight);
-            effect.setFloat2('diffuseUVTranslation', p.su, p.sv);
+            effect.setFloat2('diffuseUVScaling', ctx.sWidth, ctx.sHeight);
+            effect.setFloat2('diffuseUVTranslation', ctx.su, ctx.sv);
 
-            effect.setFloat2('opacityUVScaling', p.oWidth, p.oHeight);
-            effect.setFloat2('opacityUVTranslation', p.ou, p.ov);
+            if (ctx.opacityTexture) {
+                effect.setTexture('opacitySampler', ctx.opacityTexture);
+                effect.setFloat2('opacityUVScaling', ctx.oWidth, ctx.oHeight);
+                effect.setFloat2('opacityUVTranslation', ctx.ou, ctx.ov);
+            } else {
+                effect.setTexture('opacitySampler', diffuseTexture);
+                effect.setFloat2('opacityUVScaling', ctx.dWidth, ctx.dHeight);
+                effect.setFloat2('opacityUVTranslation', ctx.du, ctx.dv);
+            }
 
-            effect.setFloat2('vertexSkewing', p.skewU, p.skewV);
+            effect.setFloat2('vertexSkewing', ctx.skewU, ctx.skewV);
 
             // Render to backbuffer
             engine.drawElementsType(Material.TriangleFillMode, 0, 6);
@@ -333,25 +424,31 @@ export class TextureCanvas extends Texture {
 
             engine.unBindFramebuffer(this._backBuffer._texture, !this._generateMipMaps);
         }
+        this._previousDrawInfo = {
+            wasReady: isReady,
+            diffuseTexture: diffuseTexture,
+            drawContext: ctx
+        };
     }
 
     /**
-     * Clears this texture using the set clearColor
+     * Clears this texture using clearColor from the provided context.
      */
-    clear(): void {
+    clear(ctx: TextureCanvasDrawContext = this._defaultDrawContext): void {
         // Backbuffer
         this._engine.bindFramebuffer(this._backBuffer._texture);
-        this._engine.clear(this.clearColor, true, false, false);
+        this._engine.clear(ctx.clearColor, true, false, false);
         this._engine.unBindFramebuffer(this._backBuffer._texture, !this._generateMipMaps);
 
         // Self
         this._engine.bindFramebuffer(this._texture);
-        this._engine.clear(this.clearColor, true, false, false);
+        this._engine.clear(ctx.clearColor, true, false, false);
         this._engine.unBindFramebuffer(this._texture, !this._generateMipMaps);
     }
 
     /**
     * Resize the texture to new value.
+    * 
     * @param size Define the new size the texture should have
     * @param generateMipMaps Define whether the new texture should create mip maps
     */
@@ -363,6 +460,13 @@ export class TextureCanvas extends Texture {
         // Update properties
         this._size = size;
         this._generateMipMaps = generateMipMaps;
+    }
+
+    /**
+     * Creates a new draw context. Does NOT invalidate other contexts created.
+     */
+    public createContext() {
+        return new TextureCanvasDrawContext(this);
     }
 
     private _createIndexBuffer(): void {
@@ -387,7 +491,9 @@ export class TextureCanvas extends Texture {
     */
     public clone(): TextureCanvas {
         var canvas = new TextureCanvas(this._size, this.getScene(), (canvas: TextureCanvas) => {
-            canvas.drawTexture(this);
+            if (this._previousDrawInfo && this._previousDrawInfo.wasReady) {
+                canvas.drawTexture(this._previousDrawInfo.diffuseTexture, this._previousDrawInfo.drawContext);
+            }
         }, { generateMipMaps: this._generateMipMaps, samplingMode: this.samplingMode });
         return canvas;
     }
@@ -413,37 +519,5 @@ export class TextureCanvas extends Texture {
         }
 
         super.dispose();
-    }
-
-    public static getDefaultTextureDrawOptions(): TextureDrawOptions {
-        return {
-            /* Destination */
-            du: 0,
-            dv: 0,
-            dWidth: 1,
-            dHeight: 1,
-            rotation: 0,
-
-            /* Source */
-            su: 0,
-            sv: 0,
-            sWidth: 1,
-            sHeight: 1,
-
-            /* Pivot */
-            pu: 0.5,
-            pv: 0.5,
-            pIsLocalSpace: true,
-
-            /* Skewing (shearing) */
-            skewU: 0,
-            skewV: 0,
-
-            /* Opacity */
-            ou: 0,
-            ov: 0,
-            oWidth: 0,
-            oHeight: 0
-        }
     }
 }
