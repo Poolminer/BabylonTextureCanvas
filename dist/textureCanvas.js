@@ -18,48 +18,132 @@ var material_1 = require("@babylonjs/core/Materials/material");
 var texture_1 = require("@babylonjs/core/Materials/Textures/texture");
 var math_1 = require("@babylonjs/core/Maths/math");
 var buffer_1 = require("@babylonjs/core/Meshes/buffer");
-effect_1.Effect.ShadersStore["textureCanvasVertexShader"] = "\n// Attributes\nattribute vec2 position;\n\n// Output\nvarying vec2 vPosition;\nvarying vec2 vUV;\n\n// Uniforms\nuniform float rotation;\nuniform vec2 pivot;\n\nuniform vec2 vertextTranslation;\nuniform vec2 vertexScaling;\nuniform vec2 vertexSkewing;\n\nconst vec2 madd = vec2(0.5, 0.5);\n\nvec2 rotate(vec2 v, float a) {\n\tfloat s = sin(a);\n\tfloat c = cos(a);\n\tmat2 m = mat2(c, -s, s, c);\n\treturn m * v;\n}\n\nvoid main(void) {\t\n\tvPosition = position;\n\tvUV = position * madd + madd;\n\t\n\tgl_Position = vec4((rotate((vec2(position.x + vertexSkewing.x * position.y, position.y + vertexSkewing.y * position.x) * vertexScaling + vertextTranslation - pivot), rotation) + pivot), 0.0, 1.0);\n}\n";
-effect_1.Effect.ShadersStore["textureCanvasFragmentShader"] = "\nprecision highp float;\n\nvarying vec2 vUV;\n\nuniform sampler2D diffuseSampler;\nuniform sampler2D opacitySampler;\nuniform sampler2D backgroundSampler;\n\nuniform vec2 diffuseUVScaling;\nuniform vec2 diffuseUVTranslation;\n\nuniform vec2 opacityUVScaling;\nuniform vec2 opacityUVTranslation;\n\nvoid main(void) {\n    vec4 backgroundPixel = texture2D(backgroundSampler, vUV);\n    vec4 diffusePixel = texture2D(diffuseSampler, vUV * diffuseUVScaling + diffuseUVTranslation);\n    vec4 opacityPixel = texture2D(opacitySampler, vUV * opacityUVScaling + opacityUVTranslation);\n    gl_FragColor = mix(backgroundPixel, diffusePixel, opacityPixel.a);\n}\n";
+effect_1.Effect.ShadersStore["textureCanvasVertexShader"] = "\n// Attributes\nattribute vec2 position;\n\n// Output\nvarying vec2 vPosition;\nvarying vec2 vLocalUV;\nvarying vec2 vWorldUV;\n\n// Uniforms\nuniform mat4 rotationMatrix;\nuniform vec2 pivotPoint;\nuniform vec2 translation;\nuniform vec2 scaling;\nuniform vec2 skewing;\n\nconst vec2 madd = vec2(0.5, 0.5);\n\nvoid main(void) {\n    vec2 skewed = vec2(position.x + skewing.x * position.y, position.y + skewing.y * position.x);\n    vec2 transformed = (vec4(skewed * scaling + translation - pivotPoint, 0.0, 0.0) * rotationMatrix).xy + pivotPoint;\n\n    gl_Position = vec4(transformed, 0.0, 1.0);\n    \n    vPosition = position;\n\tvLocalUV = position * madd + madd;\n    vWorldUV = gl_Position.xy * madd + madd;\n}\n";
+effect_1.Effect.ShadersStore["textureCanvasFragmentShader"] = "\nprecision highp float;\n\nvarying vec2 vLocalUV;\nvarying vec2 vWorldUV;\n\nuniform sampler2D diffuseSampler;\nuniform sampler2D opacitySampler;\nuniform sampler2D backgroundSampler;\n\nuniform vec4 diffuseSamplingRect;\nuniform vec4 opacitySamplingRect;\nuniform float opacityTextureIntensity;\n\nvoid main(void) {\n    vec4 backgroundPixel = texture2D(backgroundSampler, vWorldUV);\n    vec4 diffusePixel = texture2D(diffuseSampler, vLocalUV * diffuseSamplingRect.zw + diffuseSamplingRect.xy);\n    vec4 opacityPixel = texture2D(opacitySampler, vLocalUV * opacitySamplingRect.zw + opacitySamplingRect.xy);\n    gl_FragColor = mix(backgroundPixel, diffusePixel, opacityPixel.a * opacityTextureIntensity + (1.0 - opacityTextureIntensity));\n}\n";
+var UVector = /** @class */ (function () {
+    function UVector(u, v) {
+        this.u = u;
+        this.v = v;
+    }
+    /**
+     * Returns a clone of this UVector.
+     */
+    UVector.prototype.clone = function () {
+        return new UVector(this.u, this.v);
+    };
+    return UVector;
+}());
+exports.UVector = UVector;
+var Rectangle = /** @class */ (function () {
+    /**
+     * A rectangle in uv-space.
+     *
+     * @param u The u-coordinate.
+     * @param v The v-coordinate.
+     * @param width The width.
+     * @param height The height.
+     */
+    function Rectangle(u, v, width, height) {
+        this.u = u;
+        this.v = v;
+        this.width = width;
+        this.height = height;
+    }
+    /**
+     * Returns a clone of this rectangle.
+     */
+    Rectangle.prototype.clone = function () {
+        return new Rectangle(this.u, this.v, this.width, this.height);
+    };
+    return Rectangle;
+}());
+exports.Rectangle = Rectangle;
+var PivotPoint = /** @class */ (function (_super) {
+    __extends(PivotPoint, _super);
+    /**
+     * A rotation origin.
+     *
+     * @param u The u-coordinate.
+     * @param v The v-coordinate.
+     * @param isLocalSpace Whether the pivot coordinates are in local space (of the diffuse textures) or in world space (of the canvas).
+     */
+    function PivotPoint(u, v, isLocalSpace) {
+        var _this = _super.call(this, u, v) || this;
+        _this.u = u;
+        _this.v = v;
+        _this.isLocalSpace = isLocalSpace;
+        return _this;
+    }
+    /**
+     * Returns a clone of this pivot point.
+     */
+    PivotPoint.prototype.clone = function () {
+        return new PivotPoint(this.u, this.v, this.isLocalSpace);
+    };
+    return PivotPoint;
+}(UVector));
+exports.PivotPoint = PivotPoint;
+var Vector3Matrix = /** @class */ (function (_super) {
+    __extends(Vector3Matrix, _super);
+    function Vector3Matrix(x, y, z) {
+        var _this = _super.call(this, x, y, z) || this;
+        _this._matrixId = math_1.Vector3.Zero();
+        _this._matrix = math_1.Matrix.Identity();
+        _this.getMatrix();
+        return _this;
+    }
+    /**
+     * Overwrites the computed rotation matrix for the current xyz values.
+     *
+     * @param matrix The matrix to set.
+     */
+    Vector3Matrix.prototype.setMatrix = function (matrix) {
+        this._matrix = matrix;
+        this._matrixId.copyFrom(this);
+        return matrix;
+    };
+    /**
+     * Gets the computed rotation matrix for the current xyz values.
+     */
+    Vector3Matrix.prototype.getMatrix = function () {
+        if (!this.equals(this._matrixId)) {
+            math_1.Matrix.RotationYawPitchRollToRef(this.y, this.x, this.z, this._matrix);
+            this._matrixId.copyFrom(this);
+        }
+        return this._matrix;
+    };
+    /**
+     * Returns a clone of this Vector3Matrix.
+     * @param cloneMatrix Wether to clone the matrix (true by default).
+     */
+    Vector3Matrix.prototype.clone = function (cloneMatrix) {
+        if (cloneMatrix === void 0) { cloneMatrix = true; }
+        var vec = new Vector3Matrix(this.x, this.y, this.z);
+        vec._matrixId = this._matrixId;
+        vec._matrix = cloneMatrix ? this._matrix.clone() : this._matrix;
+        return;
+    };
+    return Vector3Matrix;
+}(math_1.Vector3));
+exports.Vector3Matrix = Vector3Matrix;
 var TextureCanvasDrawContext = /** @class */ (function () {
     function TextureCanvasDrawContext(textureCanvas) {
         this.textureCanvas = textureCanvas;
         this._defaultTextureDrawOptions = TextureCanvasDrawContext.DEFAULT_TEXTURE_DRAW_OPTIONS;
-        /** The u-coordinate of this texture at which to draw the diffuse texture; with the origin being the bottom-left corner. */
-        this.du = 0;
-        /** The v-coordinate of this texture at which to draw the diffuse texture; with the origin being the bottom-left corner. */
-        this.dv = 0;
-        /** The width to draw the texture at; ranging from 0.0 to 1.0 */
-        this.dWidth = 1;
-        /** The height to draw the texture at; ranging from 0.0 to 1.0 */
-        this.dHeight = 1;
-        /** The u-coordinate of the diffuse texture from which to draw it. */
-        this.su = 0;
-        /** The v-coordinate of the diffuse texture from which to draw it. */
-        this.sv = 0;
-        /** The width of the region of the diffuse texture to be drawn; ranging from 0.0 to 1.0 */
-        this.sWidth = 1;
-        /** The height of the region of the diffuse texture to be drawn; ranging from 0.0 to 1.0 */
-        this.sHeight = 1;
+        /** The area of the diffuse texture to draw. */
+        this.diffuseSamplingRect = new Rectangle(0, 0, 1, 1);
+        /** The area to draw to. */
+        this.drawRect = new Rectangle(0, 0, 1, 1);
         /** The rotation in radians to rotate the diffuse textures by. */
-        this.rotation = 0;
-        /** The u-coordinate of the rotation pivot point. */
-        this.pu = 0.5;
-        /** The v-coordinate of the rotation pivot point. */
-        this.pv = 0.5;
-        /** Whether the pivot coordinates are in local space (of the diffuse textures) or in world space (of the canvas). */
-        this.pIsLocalSpace = true;
-        /** The horizontal skewing factor. */
-        this.skewU = 0;
-        /** The vertical skewing factor. */
-        this.skewV = 0;
+        this.rotation = new Vector3Matrix(0, 0, 0);
+        /** The rotation pivot point. */
+        this.pivotPoint = new PivotPoint(0.5, 0.5, true);
+        /** The amount of skewing/shearing. */
+        this.skewing = new UVector(0, 0);
+        /** How much the opacity texture should be contributing to the difuse's alpha values, ranging from 0.0 to 1.0 */
+        this.opacityTextureIntensity = 1;
         /** The u-coordinate of the opacity texture from which to draw it. */
-        this.ou = 0;
-        /** The v-coordinate of the opacity texture from which to draw it. */
-        this.ov = 0;
-        /** The width of the region of the opacity texture to be drawn; ranging from 0.0 to 1.0 */
-        this.oWidth = 1;
-        /** The height of the region of the opacity texture to be drawn; ranging from 0.0 to 1.0 */
-        this.oHeight = 1;
+        this.opacitySamplingRect = new Rectangle(0, 0, 1, 1);
         /** The color to clear the canvas with. */
         this.clearColor = new math_1.Color4(0.0, 0.0, 0.0, 0.0);
     }
@@ -67,23 +151,7 @@ var TextureCanvasDrawContext = /** @class */ (function () {
      * Resets the draw options to their default values.
      */
     TextureCanvasDrawContext.prototype.reset = function () {
-        this._defaultTextureDrawOptions.clone(true, this);
-    };
-    /**
-     * Sets the texture to draw.
-     *
-     * @param texture The texture to draw.
-     */
-    TextureCanvasDrawContext.prototype.setDiffuseTexture = function (texture) {
-        this.diffuseTexture = texture;
-    };
-    /**
-     * Sets a texture to be used as the diffuse texture's alpha channel.
-     *
-     * @param texture The texture to use as the diffuse texture's alpha channel.
-     */
-    TextureCanvasDrawContext.prototype.setOpacityTexture = function (texture) {
-        this.opacityTexture = texture;
+        this._defaultTextureDrawOptions.clone(true, false, this);
     };
     /**
      * Sets which area of the diffuse texture to draw.
@@ -94,14 +162,14 @@ var TextureCanvasDrawContext = /** @class */ (function () {
      * @param height The height of the area to be drawn, ranging from 0.0 to 1.0
      */
     TextureCanvasDrawContext.prototype.setDiffuseSamplingRect = function (u, v, width, height) {
-        if (u === void 0) { u = this._defaultTextureDrawOptions.su; }
-        if (v === void 0) { v = this._defaultTextureDrawOptions.sv; }
-        if (width === void 0) { width = this._defaultTextureDrawOptions.sWidth; }
-        if (height === void 0) { height = this._defaultTextureDrawOptions.sHeight; }
-        this.su = u;
-        this.sv = v;
-        this.sWidth = width;
-        this.sHeight = height;
+        if (u === void 0) { u = this._defaultTextureDrawOptions.diffuseSamplingRect.u; }
+        if (v === void 0) { v = this._defaultTextureDrawOptions.diffuseSamplingRect.v; }
+        if (width === void 0) { width = this._defaultTextureDrawOptions.diffuseSamplingRect.width; }
+        if (height === void 0) { height = this._defaultTextureDrawOptions.diffuseSamplingRect.height; }
+        this.diffuseSamplingRect.u = u;
+        this.diffuseSamplingRect.v = v;
+        this.diffuseSamplingRect.width = width;
+        this.diffuseSamplingRect.height = height;
     };
     /**
      * Sets which area of the opacity texture to draw.
@@ -112,14 +180,14 @@ var TextureCanvasDrawContext = /** @class */ (function () {
      * @param height The height of the area to be drawn, ranging from 0.0 to 1.0
      */
     TextureCanvasDrawContext.prototype.setOpacitySamplingRect = function (u, v, width, height) {
-        if (u === void 0) { u = this._defaultTextureDrawOptions.ou; }
-        if (v === void 0) { v = this._defaultTextureDrawOptions.ov; }
-        if (width === void 0) { width = this._defaultTextureDrawOptions.oWidth; }
-        if (height === void 0) { height = this._defaultTextureDrawOptions.oHeight; }
-        this.ou = u;
-        this.ov = v;
-        this.oWidth = width;
-        this.oHeight = height;
+        if (u === void 0) { u = this._defaultTextureDrawOptions.opacitySamplingRect.u; }
+        if (v === void 0) { v = this._defaultTextureDrawOptions.opacitySamplingRect.v; }
+        if (width === void 0) { width = this._defaultTextureDrawOptions.opacitySamplingRect.width; }
+        if (height === void 0) { height = this._defaultTextureDrawOptions.opacitySamplingRect.height; }
+        this.opacitySamplingRect.u = u;
+        this.opacitySamplingRect.v = v;
+        this.opacitySamplingRect.width = width;
+        this.opacitySamplingRect.height = height;
     };
     /**
      * Sets which area of this texture to draw to — this area may be tranformed by rotating/skewing.
@@ -130,14 +198,14 @@ var TextureCanvasDrawContext = /** @class */ (function () {
      * @param height The height to draw the texture at, ranging from 0.0 to 1.0
      */
     TextureCanvasDrawContext.prototype.setDrawRect = function (u, v, width, height) {
-        if (u === void 0) { u = this._defaultTextureDrawOptions.du; }
-        if (v === void 0) { v = this._defaultTextureDrawOptions.dv; }
-        if (width === void 0) { width = this._defaultTextureDrawOptions.dWidth; }
-        if (height === void 0) { height = this._defaultTextureDrawOptions.dHeight; }
-        this.du = u;
-        this.dv = v;
-        this.dWidth = width;
-        this.dHeight = height;
+        if (u === void 0) { u = this._defaultTextureDrawOptions.drawRect.u; }
+        if (v === void 0) { v = this._defaultTextureDrawOptions.drawRect.v; }
+        if (width === void 0) { width = this._defaultTextureDrawOptions.drawRect.width; }
+        if (height === void 0) { height = this._defaultTextureDrawOptions.drawRect.height; }
+        this.drawRect.u = u;
+        this.drawRect.v = v;
+        this.drawRect.width = width;
+        this.drawRect.height = height;
     };
     /**
      * Sets the rotation in radians to rotate the diffuse texture by.
@@ -156,12 +224,12 @@ var TextureCanvasDrawContext = /** @class */ (function () {
      * @param isLocalSpace Whether the pivot coordinates are in local space (of the diffuse textures) or in world space (of this texture).
      */
     TextureCanvasDrawContext.prototype.setPivotPoint = function (pu, pv, isLocalSpace) {
-        if (pu === void 0) { pu = this._defaultTextureDrawOptions.pu; }
-        if (pv === void 0) { pv = this._defaultTextureDrawOptions.pv; }
-        if (isLocalSpace === void 0) { isLocalSpace = this._defaultTextureDrawOptions.pIsLocalSpace; }
-        this.pu = pu;
-        this.pv = pv;
-        this.pIsLocalSpace = isLocalSpace;
+        if (pu === void 0) { pu = this._defaultTextureDrawOptions.pivotPoint.u; }
+        if (pv === void 0) { pv = this._defaultTextureDrawOptions.pivotPoint.v; }
+        if (isLocalSpace === void 0) { isLocalSpace = this._defaultTextureDrawOptions.pivotPoint.isLocalSpace; }
+        this.pivotPoint.u = pu;
+        this.pivotPoint.v = pv;
+        this.pivotPoint.isLocalSpace = isLocalSpace;
     };
     /**
      * Sets how the texture should be skewed (shear transform).
@@ -170,10 +238,10 @@ var TextureCanvasDrawContext = /** @class */ (function () {
      * @param v The vertical skewing factor.
      */
     TextureCanvasDrawContext.prototype.setSkewing = function (u, v) {
-        if (u === void 0) { u = this._defaultTextureDrawOptions.skewU; }
-        if (v === void 0) { v = this._defaultTextureDrawOptions.skewV; }
-        this.skewU = u;
-        this.skewV = v;
+        if (u === void 0) { u = this._defaultTextureDrawOptions.skewing.u; }
+        if (v === void 0) { v = this._defaultTextureDrawOptions.skewing.v; }
+        this.skewing.u = u;
+        this.skewing.v = v;
     };
     /**
      * Draws the diffuse texture, if set.
@@ -198,35 +266,41 @@ var TextureCanvasDrawContext = /** @class */ (function () {
     /**
      * Returns a clone of this context.
      *
-     * @param deep Wether to clone the member objects.
+     * @param cloneDrawOptions Wether to clone the member objects.
+     * @param cloneTextures Wether to clone the diffuse and opacity texture.
      * @param ref The context to clone into.
      */
-    TextureCanvasDrawContext.prototype.clone = function (deep, ref) {
-        if (deep === void 0) { deep = false; }
+    TextureCanvasDrawContext.prototype.clone = function (cloneDrawOptions, cloneTextures, ref) {
+        if (cloneDrawOptions === void 0) { cloneDrawOptions = false; }
+        if (cloneTextures === void 0) { cloneTextures = false; }
         if (!ref) {
             ref = new TextureCanvasDrawContext(this.textureCanvas);
         }
-        ref.diffuseTexture = (deep && this.diffuseTexture) ? this.diffuseTexture.clone() : this.diffuseTexture;
-        ref.du = this.du;
-        ref.dv = this.dv;
-        ref.dWidth = this.dWidth;
-        ref.dHeight = this.dHeight;
-        ref.su = this.su;
-        ref.sv = this.sv;
-        ref.sWidth = this.sWidth;
-        ref.sHeight = this.sHeight;
+        if (cloneDrawOptions) {
+            ref.drawRect = this.drawRect.clone();
+            ref.diffuseSamplingRect = this.diffuseSamplingRect.clone();
+            ref.pivotPoint = this.pivotPoint.clone();
+            ref.skewing = this.skewing.clone();
+            ref.opacitySamplingRect = this.opacitySamplingRect.clone();
+            ref.clearColor = this.clearColor.clone();
+        }
+        else {
+            ref.drawRect = this.drawRect;
+            ref.diffuseSamplingRect = this.diffuseSamplingRect;
+            ref.pivotPoint = this.pivotPoint;
+            ref.skewing = this.skewing;
+            ref.opacitySamplingRect = this.opacitySamplingRect;
+            ref.clearColor = this.clearColor;
+        }
+        if (cloneTextures) {
+            ref.diffuseTexture = this.diffuseTexture ? this.diffuseTexture.clone() : this.diffuseTexture;
+            ref.opacityTexture = this.opacityTexture ? this.opacityTexture.clone() : this.opacityTexture;
+        }
+        else {
+            ref.diffuseTexture = this.diffuseTexture;
+            ref.opacityTexture = this.opacityTexture;
+        }
         ref.rotation = this.rotation;
-        ref.pu = this.pu;
-        ref.pv = this.pv;
-        ref.pIsLocalSpace = this.pIsLocalSpace;
-        ref.skewU = this.skewU;
-        ref.skewV = this.skewV;
-        ref.opacityTexture = (deep && this.opacityTexture) ? this.opacityTexture.clone() : this.opacityTexture;
-        ref.ou = this.ou;
-        ref.ov = this.ov;
-        ref.oWidth = this.oWidth;
-        ref.oHeight = this.oHeight;
-        ref.clearColor = deep ? this.clearColor.clone() : this.clearColor;
         return ref;
     };
     TextureCanvasDrawContext.DEFAULT_TEXTURE_DRAW_OPTIONS = new TextureCanvasDrawContext();
@@ -241,8 +315,8 @@ var TextureCanvas = /** @class */ (function (_super) {
         _this._vertexBuffers = {};
         _this._defaultDrawContext = new TextureCanvasDrawContext(_this);
         _this._engine = scene.getEngine();
-        var shaders = { vertex: "textureCanvas", fragment: "textureCanvas" };
-        _this._effect = _this._engine.createEffect(shaders, [buffer_1.VertexBuffer.PositionKind], ['rotation', 'pivot', 'vertextTranslation', 'vertexScaling', 'diffuseUVScaling', 'diffuseUVTranslation', 'opacityUVScaling', 'opacityUVTranslation', 'vertexSkewing'], ['diffuseSampler', 'opacitySampler', 'backgroundSampler']);
+        var shaders = { vertex: 'textureCanvas', fragment: 'textureCanvas' };
+        _this._effect = _this._engine.createEffect(shaders, [buffer_1.VertexBuffer.PositionKind], ['rotationMatrix', 'pivotPoint', 'translation', 'scaling', 'skewing', 'diffuseSamplingRect', 'opacitySamplingRect', 'opacityTextureIntensity'], ['diffuseSampler', 'opacitySampler', 'backgroundSampler']);
         _this._size = size;
         _this._texture = _this._engine.createRenderTargetTexture(size, false);
         _this._backBuffer = new texture_1.Texture(null, scene, !options.generateMipMaps, false, options.samplingMode);
@@ -304,17 +378,17 @@ var TextureCanvas = /** @class */ (function (_super) {
             var gl = engine._gl;
             var pivotU = void 0;
             var pivotV = void 0;
-            var vertexTranslationX = ctx.dWidth - 1 + ctx.du * 2;
-            var vertexTranslationY = ctx.dHeight - 1 + ctx.dv * 2;
-            if (ctx.pIsLocalSpace) {
-                var _pu = (ctx.pu * 2 - 1) * ctx.dWidth;
-                var _pv = (ctx.pv * 2 - 1) * ctx.dHeight;
-                pivotU = _pu + _pv * ctx.skewU + vertexTranslationX;
-                pivotV = _pv + _pu * ctx.skewV + vertexTranslationY;
+            var translationX = ctx.drawRect.width - 1 + ctx.drawRect.u * 2;
+            var translationY = ctx.drawRect.height - 1 + ctx.drawRect.v * 2;
+            if (ctx.pivotPoint.isLocalSpace) {
+                var _pu = (ctx.pivotPoint.u * 2 - 1) * ctx.drawRect.width;
+                var _pv = (ctx.pivotPoint.v * 2 - 1) * ctx.drawRect.height;
+                pivotU = _pu + _pv * ctx.skewing.u + translationX;
+                pivotV = _pv + _pu * ctx.skewing.v + translationY;
             }
             else {
-                pivotU = ctx.pu * 2 - 1;
-                pivotV = ctx.pv * 2 - 1;
+                pivotU = ctx.pivotPoint.u * 2 - 1;
+                pivotV = ctx.pivotPoint.v * 2 - 1;
             }
             engine.enableEffect(this._effect);
             engine.setState(false);
@@ -322,23 +396,22 @@ var TextureCanvas = /** @class */ (function (_super) {
             engine.bindBuffers(this._vertexBuffers, this._indexBuffer, this._effect);
             effect.setTexture('diffuseSampler', diffuseTexture);
             effect.setTexture('backgroundSampler', this);
-            effect.setFloat('rotation', ctx.rotation);
-            effect.setFloat2('pivot', pivotU, pivotV);
-            effect.setFloat2('vertextTranslation', vertexTranslationX, vertexTranslationY);
-            effect.setFloat2('vertexScaling', ctx.dWidth, ctx.dHeight);
-            effect.setFloat2('diffuseUVScaling', ctx.sWidth, ctx.sHeight);
-            effect.setFloat2('diffuseUVTranslation', ctx.su, ctx.sv);
+            effect.setMatrix('rotationMatrix', ctx.rotation.getMatrix());
+            effect.setFloat2('pivotPoint', pivotU, pivotV);
+            effect.setFloat2('translation', translationX, translationY);
+            effect.setFloat2('scaling', ctx.drawRect.width, ctx.drawRect.height);
+            effect.setFloat2('skewing', ctx.skewing.u, ctx.skewing.v);
+            effect.setFloat4('diffuseSamplingRect', ctx.diffuseSamplingRect.u, ctx.diffuseSamplingRect.v, ctx.diffuseSamplingRect.width, ctx.diffuseSamplingRect.height);
             if (ctx.opacityTexture) {
                 effect.setTexture('opacitySampler', ctx.opacityTexture);
-                effect.setFloat2('opacityUVScaling', ctx.oWidth, ctx.oHeight);
-                effect.setFloat2('opacityUVTranslation', ctx.ou, ctx.ov);
+                effect.setFloat4('opacitySamplingRect', ctx.opacitySamplingRect.u, ctx.opacitySamplingRect.v, ctx.opacitySamplingRect.width, ctx.opacitySamplingRect.height);
+                effect.setFloat('opacityTextureIntensity', ctx.opacityTextureIntensity);
             }
             else {
                 effect.setTexture('opacitySampler', diffuseTexture);
-                effect.setFloat2('opacityUVScaling', ctx.dWidth, ctx.dHeight);
-                effect.setFloat2('opacityUVTranslation', ctx.du, ctx.dv);
+                effect.setFloat4('opacitySamplingRect', 0, 0, 1, 1);
+                effect.setFloat('opacityTextureIntensity', 0);
             }
-            effect.setFloat2('vertexSkewing', ctx.skewU, ctx.skewV);
             // Render to backbuffer
             engine.drawElementsType(material_1.Material.TriangleFillMode, 0, 6);
             // Render to self
@@ -346,11 +419,6 @@ var TextureCanvas = /** @class */ (function (_super) {
             gl.copyTexImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 0, 0, this._texture.width, this._texture.height, 0);
             engine.unBindFramebuffer(this._backBuffer._texture, !this._generateMipMaps);
         }
-        this._previousDrawInfo = {
-            wasReady: isReady,
-            diffuseTexture: diffuseTexture,
-            drawContext: ctx
-        };
     };
     /**
      * Clears this texture using clearColor from the provided context.
@@ -405,9 +473,7 @@ var TextureCanvas = /** @class */ (function (_super) {
     TextureCanvas.prototype.clone = function () {
         var _this = this;
         var canvas = new TextureCanvas(this._size, this.getScene(), function (canvas) {
-            if (_this._previousDrawInfo && _this._previousDrawInfo.wasReady) {
-                canvas.drawTexture(_this._previousDrawInfo.diffuseTexture, _this._previousDrawInfo.drawContext);
-            }
+            canvas.drawTexture(_this);
         }, { generateMipMaps: this._generateMipMaps, samplingMode: this.samplingMode });
         return canvas;
     };
