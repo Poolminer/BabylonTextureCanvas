@@ -74,7 +74,7 @@ scene.registerBeforeRender(() => {
 ```
 Playground demo:
 
-[https://www.babylonjs-playground.com/#9S5YZY#3](https://www.babylonjs-playground.com/#9S5YZY#3)
+[https://www.babylonjs-playground.com/#9S5YZY#4](https://www.babylonjs-playground.com/#9S5YZY#3)
 
 ## Summary documentation
 [DOCUMENTATION.md](./DOCUMENTATION.md)

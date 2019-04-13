@@ -55,7 +55,7 @@ void main(void) {
     vec4 backgroundPixel = texture2D(backgroundSampler, vWorldUV);
     vec4 diffusePixel = texture2D(diffuseSampler, vLocalUV * diffuseSamplingRect.zw + diffuseSamplingRect.xy);
     vec4 opacityPixel = texture2D(opacitySampler, vLocalUV * opacitySamplingRect.zw + opacitySamplingRect.xy);
-    gl_FragColor = mix(backgroundPixel, diffusePixel, opacityPixel.a * opacityTextureIntensity + (1.0 - opacityTextureIntensity));
+    gl_FragColor = mix(backgroundPixel, diffusePixel, opacityPixel.a * opacityTextureIntensity + (1.0 - opacityTextureIntensity) * diffusePixel.a);
 }
 `;
 
