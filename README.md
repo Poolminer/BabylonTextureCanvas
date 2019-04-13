@@ -60,7 +60,6 @@ ctx1.setDrawRect(0, 0, 0.12, 0.24);
 ctx1.setPivotPoint(1, 1, true); // Top-right corner of the texture to be drawn
 
 ctx2.diffuseTexture = myOtherTexture;
-ctx2.opacityTexture = myOtherTexture;
 ctx2.setDrawRect(0.25, 0.25, 0.5, 0.5);
 
 scene.registerBeforeRender(() => {
