@@ -82,6 +82,8 @@ Playground demo:
 ## Compiling it yourself
 You need [NodeJS](https://nodejs.org/en/download/) to get and resolve the [@babylonjs/core](https://www.npmjs.com/package/@babylonjs/core) dependencies.
 
+You need [TypeScript](https://www.npmjs.com/package/typescript) to compile the source code.
+
 You need [Java](https://www.java.com/en/download/) to convert the compiled modular code (*textureCanvas.ts*) to the non-modular code (*textureCanvasNoModule.js*).
 
 1. Clone / download this repository;
