@@ -101,7 +101,7 @@ export class PivotPoint extends UVector {
      * @param v The v-coordinate.
      * @param isLocalSpace Whether the pivot coordinates are in local space (of the diffuse textures) or in world space (of the canvas).
      */
-    constructor(public u: number, public v: number, public isLocalSpace) {
+    constructor(public u: number, public v: number, public isLocalSpace: boolean) {
         super(u, v);
     }
 
@@ -170,7 +170,7 @@ export class TextureCanvasDrawContext {
     /** The area to draw to. */
     public drawRect: Rectangle = new Rectangle(0, 0, 1, 1);
 
-    /** The rotation in radians to rotate the diffuse textures by. */
+    /** The rotation axes in radians to rotate the diffuse textures by (z is 2D rotation). */
     public rotation: Vector3Matrix = new Vector3Matrix(0, 0, 0);
 
     /** The rotation pivot point. */
@@ -185,7 +185,7 @@ export class TextureCanvasDrawContext {
     /** How much the opacity texture should be contributing to the difuse's alpha values, ranging from 0.0 to 1.0 */
     public opacityTextureIntensity: number = 1;
 
-    /** The u-coordinate of the opacity texture from which to draw it. */
+    /** The area of the opacity texture to use. */
     public opacitySamplingRect: Rectangle = new Rectangle(0, 0, 1, 1);
 
     /** The color to clear the canvas with. */
@@ -247,12 +247,16 @@ export class TextureCanvasDrawContext {
     }
 
     /**
-     * Sets the rotation in radians to rotate the diffuse texture by.
+     * Sets the rotation axes in radians rotate the diffuse texture by.
      * 
-     * @param rotation The rotation in radians to rotate the diffuse textures by.
+     * @param x 3D rotation in radians along the u-axis.
+     * @param y 3D rotation in radians along the v-axis.
+     * @param z 2D rotation in radians.
      */
-    setRotation(rotation = this._defaultTextureDrawOptions.rotation): void {
-        this.rotation = rotation;
+    setRotation(x = this._defaultTextureDrawOptions.rotation.x, y = this._defaultTextureDrawOptions.rotation.y, z = this._defaultTextureDrawOptions.rotation.z, ): void {
+        this.rotation.x = x;
+        this.rotation.y = y;
+        this.rotation.z = z;
     }
 
     /**
@@ -352,7 +356,7 @@ export class TextureCanvas extends Texture {
 
     private _defaultDrawContext = new TextureCanvasDrawContext(this);
 
-    constructor(size: number | { width: number, height: number }, scene: Nullable<Scene>, onReady?: Function, options: { generateMipMaps?: boolean, samplingMode?: number } = {}) {
+    constructor(size: number | { width: number, height: number }, scene: Nullable<Scene>, initTexture?: Texture, onReady?: Function, options: { generateMipMaps?: boolean, samplingMode?: number } = {}) {
         super(null, scene, !options.generateMipMaps, false, options.samplingMode);
         this._engine = scene.getEngine();
         let shaders = { vertex: 'textureCanvas', fragment: 'textureCanvas' };
@@ -382,6 +386,15 @@ export class TextureCanvas extends Texture {
         this.clear();
 
         this._effect.executeWhenCompiled(() => {
+            if (initTexture) {
+                if (initTexture.isReady()) {
+                    this.drawTexture(initTexture);
+                } else {
+                    initTexture.onLoadObservable.addOnce(() => {
+                        this.drawTexture(initTexture);
+                    });
+                }
+            }
             if (onReady) {
                 onReady(this);
             }
@@ -536,10 +549,7 @@ export class TextureCanvas extends Texture {
     * @returns the cloned texture
     */
     public clone(): TextureCanvas {
-        var canvas = new TextureCanvas(this._size, this.getScene(), (canvas: TextureCanvas) => {
-            canvas.drawTexture(this);
-        }, { generateMipMaps: this._generateMipMaps, samplingMode: this.samplingMode });
-        return canvas;
+        return new TextureCanvas(this._size, this.getScene(), this, undefined, { generateMipMaps: this._generateMipMaps, samplingMode: this.samplingMode });
     }
 
     /**

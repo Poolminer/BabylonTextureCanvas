@@ -4,16 +4,16 @@ A Babylon.js texture to draw textures onto.
 
 ## Getting it
 ### As BABYLON.TextureCanvas
-Include [textureCanvasNoModule.js](https://croncle.blob.core.windows.net/babylonjs/textureCanvasNoModule.js)
+Include [textureCanvasNoModule.js](https://poolminer.github.io/BabylonTextureCanvas/dist/textureCanvasNoModule.js)
 
 From an html document:
 ```html
-<script src="https://croncle.blob.core.windows.net/babylonjs/textureCanvasNoModule.js"></script>
+<script src="https://poolminer.github.io/BabylonTextureCanvas/dist/textureCanvasNoModule.js"></script>
 ```
 
 From within Babylon.js:
 ```javascript
-BABYLON.Tools.LoadScript('https://croncle.blob.core.windows.net/babylonjs/textureCanvasNoModule.js', () => {
+BABYLON.Tools.LoadScript('https://poolminer.github.io/BabylonTextureCanvas/dist/textureCanvasNoModule.js', () => {
     //ready
 });
 ```
@@ -22,15 +22,13 @@ BABYLON.Tools.LoadScript('https://croncle.blob.core.windows.net/babylonjs/textur
 Import ```TextureCanvas``` from *textureCanvas.ts/js*, using modules from [@babylonjs/core](https://www.npmjs.com/package/@babylonjs/core).
 
 ## Basic usage examples
-Create a 128px by 128px TextureCanvas and draw *myTexture* when ready:
+Create a 128px by 128px TextureCanvas, initialized with *myTexture*:
 ```javascript
-new TextureCanvas(128, scene, (canvas) => {
-    canvas.drawTexture(myTexture);
-});
+new TextureCanvas(128, scene, myTexture);
 ```
 Playground demo:
 
-[https://www.babylonjs-playground.com/#9S5YZY](https://www.babylonjs-playground.com/#9S5YZY)
+[https://www.babylonjs-playground.com/#9S5YZY#6](https://www.babylonjs-playground.com/#9S5YZY#6)
 
 ---
 
@@ -44,7 +42,7 @@ ctx.drawTexture(myTexture);
 ```
 Playground demo:
 
-[https://www.babylonjs-playground.com/#9S5YZY#2](https://www.babylonjs-playground.com/#9S5YZY#1)
+[https://www.babylonjs-playground.com/#9S5YZY#7](https://www.babylonjs-playground.com/#9S5YZY#7)
 
 ---
 
@@ -73,7 +71,7 @@ scene.registerBeforeRender(() => {
 ```
 Playground demo:
 
-[https://www.babylonjs-playground.com/#9S5YZY#4](https://www.babylonjs-playground.com/#9S5YZY#3)
+[https://www.babylonjs-playground.com/#9S5YZY#8](https://www.babylonjs-playground.com/#9S5YZY#8)
 
 ## Summary documentation
 [DOCUMENTATION.md](./DOCUMENTATION.md)

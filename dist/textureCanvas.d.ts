@@ -33,7 +33,7 @@ export declare class Rectangle {
 export declare class PivotPoint extends UVector {
     u: number;
     v: number;
-    isLocalSpace: any;
+    isLocalSpace: boolean;
     /**
      * A rotation origin.
      *
@@ -41,7 +41,7 @@ export declare class PivotPoint extends UVector {
      * @param v The v-coordinate.
      * @param isLocalSpace Whether the pivot coordinates are in local space (of the diffuse textures) or in world space (of the canvas).
      */
-    constructor(u: number, v: number, isLocalSpace: any);
+    constructor(u: number, v: number, isLocalSpace: boolean);
     /**
      * Returns a clone of this pivot point.
      */
@@ -77,7 +77,7 @@ export declare class TextureCanvasDrawContext {
     diffuseSamplingRect: Rectangle;
     /** The area to draw to. */
     drawRect: Rectangle;
-    /** The rotation in radians to rotate the diffuse textures by. */
+    /** The rotation axes in radians to rotate the diffuse textures by (z is 2D rotation). */
     rotation: Vector3Matrix;
     /** The rotation pivot point. */
     pivotPoint: PivotPoint;
@@ -87,7 +87,7 @@ export declare class TextureCanvasDrawContext {
     opacityTexture: Texture;
     /** How much the opacity texture should be contributing to the difuse's alpha values, ranging from 0.0 to 1.0 */
     opacityTextureIntensity: number;
-    /** The u-coordinate of the opacity texture from which to draw it. */
+    /** The area of the opacity texture to use. */
     opacitySamplingRect: Rectangle;
     /** The color to clear the canvas with. */
     clearColor: Color4;
@@ -124,11 +124,13 @@ export declare class TextureCanvasDrawContext {
      */
     setDrawRect(u?: number, v?: number, width?: number, height?: number): void;
     /**
-     * Sets the rotation in radians to rotate the diffuse texture by.
+     * Sets the rotation axes in radians rotate the diffuse texture by.
      *
-     * @param rotation The rotation in radians to rotate the diffuse textures by.
+     * @param x 3D rotation in radians along the u-axis.
+     * @param y 3D rotation in radians along the v-axis.
+     * @param z 2D rotation in radians.
      */
-    setRotation(rotation?: Vector3Matrix): void;
+    setRotation(x?: number, y?: number, z?: number): void;
     /**
      * Sets the point around which to rotate the texture.
      *
@@ -136,7 +138,7 @@ export declare class TextureCanvasDrawContext {
      * @param pv The v-coordinate of the rotation pivot point.
      * @param isLocalSpace Whether the pivot coordinates are in local space (of the diffuse textures) or in world space (of this texture).
      */
-    setPivotPoint(pu?: number, pv?: number, isLocalSpace?: any): void;
+    setPivotPoint(pu?: number, pv?: number, isLocalSpace?: boolean): void;
     /**
      * Sets how the texture should be skewed (shear transform).
      *
@@ -179,7 +181,7 @@ export declare class TextureCanvas extends Texture {
     constructor(size: number | {
         width: number;
         height: number;
-    }, scene: Nullable<Scene>, onReady?: Function, options?: {
+    }, scene: Nullable<Scene>, initTexture?: Texture, onReady?: Function, options?: {
         generateMipMaps?: boolean;
         samplingMode?: number;
     });

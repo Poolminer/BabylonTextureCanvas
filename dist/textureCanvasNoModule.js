@@ -134,7 +134,7 @@ var TextureCanvasDrawContext = /** @class */ (function () {
         this.diffuseSamplingRect = new Rectangle(0, 0, 1, 1);
         /** The area to draw to. */
         this.drawRect = new Rectangle(0, 0, 1, 1);
-        /** The rotation in radians to rotate the diffuse textures by. */
+        /** The rotation axes in radians to rotate the diffuse textures by (z is 2D rotation). */
         this.rotation = new Vector3Matrix(0, 0, 0);
         /** The rotation pivot point. */
         this.pivotPoint = new PivotPoint(0.5, 0.5, true);
@@ -142,7 +142,7 @@ var TextureCanvasDrawContext = /** @class */ (function () {
         this.skewing = new UVector(0, 0);
         /** How much the opacity texture should be contributing to the difuse's alpha values, ranging from 0.0 to 1.0 */
         this.opacityTextureIntensity = 1;
-        /** The u-coordinate of the opacity texture from which to draw it. */
+        /** The area of the opacity texture to use. */
         this.opacitySamplingRect = new Rectangle(0, 0, 1, 1);
         /** The color to clear the canvas with. */
         this.clearColor = new math_1.Color4(0.0, 0.0, 0.0, 0.0);
@@ -208,13 +208,19 @@ var TextureCanvasDrawContext = /** @class */ (function () {
         this.drawRect.height = height;
     };
     /**
-     * Sets the rotation in radians to rotate the diffuse texture by.
+     * Sets the rotation axes in radians rotate the diffuse texture by.
      *
-     * @param rotation The rotation in radians to rotate the diffuse textures by.
+     * @param x 3D rotation in radians along the u-axis.
+     * @param y 3D rotation in radians along the v-axis.
+     * @param z 2D rotation in radians.
      */
-    TextureCanvasDrawContext.prototype.setRotation = function (rotation) {
-        if (rotation === void 0) { rotation = this._defaultTextureDrawOptions.rotation; }
-        this.rotation = rotation;
+    TextureCanvasDrawContext.prototype.setRotation = function (x, y, z) {
+        if (x === void 0) { x = this._defaultTextureDrawOptions.rotation.x; }
+        if (y === void 0) { y = this._defaultTextureDrawOptions.rotation.y; }
+        if (z === void 0) { z = this._defaultTextureDrawOptions.rotation.z; }
+        this.rotation.x = x;
+        this.rotation.y = y;
+        this.rotation.z = z;
     };
     /**
      * Sets the point around which to rotate the texture.
@@ -309,7 +315,7 @@ var TextureCanvasDrawContext = /** @class */ (function () {
 BABYLON.TextureCanvasDrawContext = TextureCanvasDrawContext;
 var TextureCanvas = /** @class */ (function (_super) {
     __extends(TextureCanvas, _super);
-    function TextureCanvas(size, scene, onReady, options) {
+    function TextureCanvas(size, scene, initTexture, onReady, options) {
         if (options === void 0) { options = {}; }
         var _this = _super.call(this, null, scene, !options.generateMipMaps, false, options.samplingMode) || this;
         _this._vertexBuffers = {};
@@ -335,6 +341,16 @@ var TextureCanvas = /** @class */ (function (_super) {
         _this._generateMipMaps = options.generateMipMaps;
         _this.clear();
         _this._effect.executeWhenCompiled(function () {
+            if (initTexture) {
+                if (initTexture.isReady()) {
+                    _this.drawTexture(initTexture);
+                }
+                else {
+                    initTexture.onLoadObservable.addOnce(function () {
+                        _this.drawTexture(initTexture);
+                    });
+                }
+            }
             if (onReady) {
                 onReady(_this);
             }
@@ -471,11 +487,7 @@ var TextureCanvas = /** @class */ (function (_super) {
     * @returns the cloned texture
     */
     TextureCanvas.prototype.clone = function () {
-        var _this = this;
-        var canvas = new TextureCanvas(this._size, this.getScene(), function (canvas) {
-            canvas.drawTexture(_this);
-        }, { generateMipMaps: this._generateMipMaps, samplingMode: this.samplingMode });
-        return canvas;
+        return new TextureCanvas(this._size, this.getScene(), this, undefined, { generateMipMaps: this._generateMipMaps, samplingMode: this.samplingMode });
     };
     /**
      * Dispose the texture and release its asoociated resources.
