@@ -576,6 +576,7 @@ export class TextureCanvas extends Texture {
             this._indexBuffer = null;
         }
 
+        this._backBuffer.dispose();
         super.dispose();
     }
 }
