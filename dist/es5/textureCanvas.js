@@ -315,7 +315,7 @@ var TextureCanvasDrawContext = /** @class */ (function () {
 exports.TextureCanvasDrawContext = TextureCanvasDrawContext;
 var TextureCanvas = /** @class */ (function (_super) {
     __extends(TextureCanvas, _super);
-    function TextureCanvas(size, scene, initTexture, onReady, options) {
+    function TextureCanvas(size, scene, initTexture, onReady, options, name) {
         if (options === void 0) { options = {}; }
         var _this = _super.call(this, null, scene, !options.generateMipMaps, false, options.samplingMode) || this;
         _this._vertexBuffers = {};
@@ -327,6 +327,10 @@ var TextureCanvas = /** @class */ (function (_super) {
         _this._texture = _this._engine.createRenderTargetTexture(size, false);
         _this._backBuffer = new texture_1.Texture(null, scene, !options.generateMipMaps, false, options.samplingMode);
         _this._backBuffer._texture = _this._engine.createRenderTargetTexture(size, false);
+        if (name) {
+            _this.name = name;
+            _this._backBuffer.name = name + 'BackBuffer';
+        }
         // VBO
         var vertices = [];
         var v = 1.0;
@@ -505,6 +509,7 @@ var TextureCanvas = /** @class */ (function (_super) {
         if (this._indexBuffer && this._engine._releaseBuffer(this._indexBuffer)) {
             this._indexBuffer = null;
         }
+        this._backBuffer.dispose();
         _super.prototype.dispose.call(this);
     };
     return TextureCanvas;

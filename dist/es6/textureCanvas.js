@@ -317,7 +317,7 @@ class TextureCanvasDrawContext {
 exports.TextureCanvasDrawContext = TextureCanvasDrawContext;
 TextureCanvasDrawContext.DEFAULT_TEXTURE_DRAW_OPTIONS = new TextureCanvasDrawContext();
 class TextureCanvas extends texture_1.Texture {
-    constructor(size, scene, initTexture, onReady, options = {}) {
+    constructor(size, scene, initTexture, onReady, options = {}, name) {
         super(null, scene, !options.generateMipMaps, false, options.samplingMode);
         this._vertexBuffers = {};
         this._defaultDrawContext = new TextureCanvasDrawContext(this);
@@ -328,6 +328,10 @@ class TextureCanvas extends texture_1.Texture {
         this._texture = this._engine.createRenderTargetTexture(size, false);
         this._backBuffer = new texture_1.Texture(null, scene, !options.generateMipMaps, false, options.samplingMode);
         this._backBuffer._texture = this._engine.createRenderTargetTexture(size, false);
+        if (name) {
+            this.name = name;
+            this._backBuffer.name = name + 'BackBuffer';
+        }
         // VBO
         let vertices = [];
         let v = 1.0;
@@ -502,6 +506,7 @@ class TextureCanvas extends texture_1.Texture {
         if (this._indexBuffer && this._engine._releaseBuffer(this._indexBuffer)) {
             this._indexBuffer = null;
         }
+        this._backBuffer.dispose();
         super.dispose();
     }
 }
