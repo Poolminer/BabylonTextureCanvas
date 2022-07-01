@@ -1,11 +1,4 @@
-import { Engine } from '@babylonjs/core/Engines/engine';
-import { Effect } from '@babylonjs/core/Materials/effect';
-import { Material } from '@babylonjs/core/Materials/material';
-import { Texture } from '@babylonjs/core/Materials/Textures/texture';
-import { Color4, Matrix, Vector3 } from '@babylonjs/core/Maths/math';
-import { VertexBuffer } from '@babylonjs/core/Meshes/buffer';
-import { Scene } from '@babylonjs/core/scene';
-import { Nullable } from '@babylonjs/core/types';
+import { Color4, DataBuffer, Effect, Engine, Material, Matrix, Nullable, RenderTargetTexture, Scene, Texture, Vector3, VertexBuffer } from "@babylonjs/core";
 
 Effect.ShadersStore["textureCanvasVertexShader"] = `
 // Attributes
@@ -149,7 +142,7 @@ export class Vector3Matrix extends Vector3 {
      * @param cloneMatrix Wether to clone the matrix (true by default).
      */
     clone(cloneMatrix = true): Vector3Matrix {
-        let vec = new Vector3Matrix(this.x, this.y, this.z);
+        const vec = new Vector3Matrix(this.x, this.y, this.z);
         vec._matrixId = this._matrixId;
         vec._matrix = cloneMatrix ? this._matrix.clone() : this._matrix;
         return
@@ -183,7 +176,7 @@ export class TextureCanvasDrawContext {
     public opacityTexture: Texture;
 
     /** How much the opacity texture should be contributing to the difuse's alpha values, ranging from 0.0 to 1.0 */
-    public opacityTextureIntensity: number = 1;
+    public opacityTextureIntensity = 1;
 
     /** The area of the opacity texture to use. */
     public opacitySamplingRect: Rectangle = new Rectangle(0, 0, 1, 1);
@@ -345,41 +338,43 @@ export class TextureCanvasDrawContext {
     }
 }
 
-export class TextureCanvas extends Texture {
-    private _size: number | { width: number, height: number };
+export class TextureCanvas extends RenderTargetTexture {
     private _vertexBuffers: { [key: string]: Nullable<VertexBuffer> } = {};
-    private _indexBuffer: Nullable<WebGLBuffer>;
+    private _indexBuffer: Nullable<DataBuffer>;
     private _effect: Effect;
-    private _generateMipMaps: boolean;
-    private _backBuffer: Texture;
-    private _engine: Engine;
+    private _backBuffer: RenderTargetTexture;
+
+    _size: number | { width: number, height: number };
+    _engine: Engine;
+    _generateMipMaps: boolean;
 
     private _defaultDrawContext = new TextureCanvasDrawContext(this);
 
-    constructor(size: number | { width: number, height: number }, scene: Nullable<Scene>, initTexture?: Texture, onReady?: Function, options: { generateMipMaps?: boolean, samplingMode?: number } = {}, name?: string) {
-        super(null, scene, !options.generateMipMaps, false, options.samplingMode);
+    constructor(size: number | { width: number, height: number }, scene: Nullable<Scene>, initTexture?: Texture, onReady?: (texture: TextureCanvas) => void, options: { generateMipMaps?: boolean, samplingMode?: number } = {}, name?: string) {
+        super(null, size, scene, !options.generateMipMaps, false, options.samplingMode);
         this._engine = scene.getEngine();
-        let shaders = { vertex: 'textureCanvas', fragment: 'textureCanvas' };
+
+        const shaders = { vertex: 'textureCanvas', fragment: 'textureCanvas' };
+
         this._effect = this._engine.createEffect(shaders, [VertexBuffer.PositionKind], ['rotationMatrix', 'pivotPoint', 'translation', 'scaling', 'skewing', 'diffuseSamplingRect', 'opacitySamplingRect', 'opacityTextureIntensity'], ['diffuseSampler', 'opacitySampler', 'backgroundSampler']);
         this._size = size;
-        this._texture = this._engine.createRenderTargetTexture(size, false);
-        this._backBuffer = new Texture(null, scene, !options.generateMipMaps, false, options.samplingMode);
-        this._backBuffer._texture = this._engine.createRenderTargetTexture(size, false);
+
+        this._backBuffer = new RenderTargetTexture(null, size, scene, !options.generateMipMaps, false, options.samplingMode);
+
         if (name) {
             this.name = name;
             this._backBuffer.name = name + 'BackBuffer';
         }
 
         // VBO
-        let vertices = [];
-        let v = 1.0;
+        const vertices = [];
+        const v = 1.0;
         vertices.push(v, v);
         vertices.push(-v, v);
         vertices.push(-v, -v);
         vertices.push(v, -v);
 
         this._vertexBuffers[VertexBuffer.PositionKind] = new VertexBuffer(this._engine, vertices, VertexBuffer.PositionKind, false, false, 2);
-
         this._createIndexBuffer();
 
         this.wrapU = 0;
@@ -435,21 +430,21 @@ export class TextureCanvas extends Texture {
      * @param ctx The texture draw context.
      */
     drawTexture(diffuseTexture: Texture, ctx: TextureCanvasDrawContext = this._defaultDrawContext): void {
-        let isReady = this.isReady();
+        const isReady = this.isReady();
         if (isReady) {
-            let engine = this._engine;
-            let effect = this._effect;
-            let gl = engine._gl;
+            const engine = this._engine;
+            const effect = this._effect;
+            const gl = engine._gl;
 
             let pivotU: number;
             let pivotV: number;
 
-            let translationX = ctx.drawRect.width - 1 + ctx.drawRect.u * 2;
-            let translationY = ctx.drawRect.height - 1 + ctx.drawRect.v * 2;
+            const translationX = ctx.drawRect.width - 1 + ctx.drawRect.u * 2;
+            const translationY = ctx.drawRect.height - 1 + ctx.drawRect.v * 2;
 
             if (ctx.pivotPoint.isLocalSpace) {
-                let _pu = (ctx.pivotPoint.u * 2 - 1) * ctx.drawRect.width;
-                let _pv = (ctx.pivotPoint.v * 2 - 1) * ctx.drawRect.height;
+                const _pu = (ctx.pivotPoint.u * 2 - 1) * ctx.drawRect.width;
+                const _pv = (ctx.pivotPoint.v * 2 - 1) * ctx.drawRect.height;
                 pivotU = _pu + _pv * ctx.skewing.u + translationX;
                 pivotV = _pv + _pu * ctx.skewing.v + translationY;
             } else {
@@ -459,7 +454,7 @@ export class TextureCanvas extends Texture {
 
             engine.enableEffect(this._effect);
             engine.setState(false);
-            engine.bindFramebuffer(this._backBuffer._texture, 0, undefined, undefined, true);
+            engine.bindFramebuffer(this._backBuffer.renderTarget, 0, undefined, undefined, true);
             engine.bindBuffers(this._vertexBuffers, this._indexBuffer, this._effect);
 
             effect.setTexture('diffuseSampler', diffuseTexture);
@@ -490,7 +485,7 @@ export class TextureCanvas extends Texture {
             engine._bindTextureDirectly(gl.TEXTURE_2D, this._texture, true);
             gl.copyTexImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 0, 0, this._texture.width, this._texture.height, 0);
 
-            engine.unBindFramebuffer(this._backBuffer._texture, !this._generateMipMaps);
+            engine.unBindFramebuffer(this._backBuffer.renderTarget, !this._generateMipMaps);
         }
     }
 
@@ -499,14 +494,14 @@ export class TextureCanvas extends Texture {
      */
     clear(ctx: TextureCanvasDrawContext = this._defaultDrawContext): void {
         // Backbuffer
-        this._engine.bindFramebuffer(this._backBuffer._texture);
+        this._engine.bindFramebuffer(this._backBuffer.renderTarget);
         this._engine.clear(ctx.clearColor, true, false, false);
-        this._engine.unBindFramebuffer(this._backBuffer._texture, !this._generateMipMaps);
+        this._engine.unBindFramebuffer(this._backBuffer.renderTarget, !this._generateMipMaps);
 
         // Self
-        this._engine.bindFramebuffer(this._texture);
+        this._engine.bindFramebuffer(this.renderTarget);
         this._engine.clear(ctx.clearColor, true, false, false);
-        this._engine.unBindFramebuffer(this._texture, !this._generateMipMaps);
+        this._engine.unBindFramebuffer(this.renderTarget, !this._generateMipMaps);
     }
 
     /**
@@ -515,14 +510,14 @@ export class TextureCanvas extends Texture {
     * @param size Define the new size the texture should have
     * @param generateMipMaps Define whether the new texture should create mip maps
     */
-    public resize(size: number | { width: number, height: number }, generateMipMaps: boolean): void {
+    public resize(size: number | { width: number, height: number }): void {
         this.releaseInternalTexture();
-        this._texture = this._engine.createRenderTargetTexture(size, generateMipMaps);
-        this._backBuffer._texture = this._engine.createRenderTargetTexture(size, generateMipMaps);
+        this._texture = this._engine.createRenderTargetTexture(size, this._generateMipMaps).texture;
+        this._backBuffer = new RenderTargetTexture(null, size, this._scene, this._generateMipMaps, false, this.samplingMode);
 
         // Update properties
         this._size = size;
-        this._generateMipMaps = generateMipMaps;
+        this._generateMipMaps = false;
     }
 
     /**
@@ -533,10 +528,10 @@ export class TextureCanvas extends Texture {
     }
 
     private _createIndexBuffer(): void {
-        let engine = this._engine;
+        const engine = this._engine;
 
         // Indices
-        let indices = [];
+        const indices = [];
         indices.push(0);
         indices.push(1);
         indices.push(2);
@@ -560,13 +555,13 @@ export class TextureCanvas extends Texture {
      * Dispose the texture and release its asoociated resources.
      */
     public dispose(): void {
-        let scene = this.getScene();
+        const scene = this.getScene();
 
         if (!scene) {
             return;
         }
 
-        var vertexBuffer = this._vertexBuffers[VertexBuffer.PositionKind];
+        const vertexBuffer = this._vertexBuffers[VertexBuffer.PositionKind];
         if (vertexBuffer) {
             vertexBuffer.dispose();
             this._vertexBuffers[VertexBuffer.PositionKind] = null;
