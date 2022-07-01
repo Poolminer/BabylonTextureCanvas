@@ -517,7 +517,7 @@ export class TextureCanvas extends RenderTargetTexture {
 
         // Update properties
         this._size = size;
-        this._generateMipMaps = false;
+        this._generateMipMaps = this._generateMipMaps;
     }
 
     /**
